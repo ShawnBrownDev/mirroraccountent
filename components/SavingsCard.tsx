@@ -1,34 +1,35 @@
-import React, { useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-} from 'react-native';
-import {
-  PiggyBank,
-  Home,
-  Car,
-  Plane,
-  Gift,
-  Heart,
-  GraduationCap,
-  Briefcase,
-  Umbrella,
-  Shield,
-  ChevronRight,
-} from 'lucide-react-native';
-import { SavingsGoal, SAVINGS_COLORS } from '@/types/savings';
+import { borderRadius, colors, shadows, spacing, typography } from '@/constants/theme';
+import { SAVINGS_COLORS, SavingsGoal } from '@/types/savings';
 import { formatCurrency } from '@/utils/money';
-import { colors, spacing, borderRadius, typography } from '@/constants/theme';
+import {
+  Briefcase,
+  Car,
+  ChevronRight,
+  Gift,
+  GraduationCap,
+  Heart,
+  Home,
+  PiggyBank,
+  Plane,
+  Shield,
+  Sparkles,
+  Umbrella,
+} from 'lucide-react-native';
+import React, { useCallback, useRef } from 'react';
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface SavingsCardProps {
   goal: SavingsGoal;
   onPress?: () => void;
 }
 
-const ICON_MAP: Record<string, React.FC<{ size: number; color: string }>> = {
+const ICON_MAP: Record<string, React.FC<{ size: number; color: string; strokeWidth?: number }>> = {
   'piggy-bank': PiggyBank,
   'home': Home,
   'car': Car,
@@ -56,21 +57,25 @@ export default function SavingsCard({ goal, onPress }: SavingsCardProps) {
     Animated.spring(scaleAnim, {
       toValue: 0.98,
       useNativeDriver: true,
+      friction: 8,
     }).start();
   }, [scaleAnim]);
 
   const handlePressOut = useCallback(() => {
     Animated.spring(scaleAnim, {
       toValue: 1,
-      friction: 3,
+      friction: 5,
+      tension: 40,
       useNativeDriver: true,
     }).start();
   }, [scaleAnim]);
 
+  const remaining = goal.targetAmount - goal.currentAmount;
+
   return (
     <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, isComplete && styles.cardComplete]}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -79,20 +84,27 @@ export default function SavingsCard({ goal, onPress }: SavingsCardProps) {
       >
         <View style={styles.header}>
           <View style={[styles.iconContainer, { backgroundColor: `${goalColor}15` }]}>
-            <IconComponent size={20} color={goalColor} />
+            <IconComponent size={20} color={goalColor} strokeWidth={1.5} />
           </View>
           <View style={styles.headerText}>
             <Text style={styles.name} numberOfLines={1}>{goal.name}</Text>
-            <Text style={styles.targetLabel}>
-              Goal: {formatCurrency(goal.targetAmount)}
-            </Text>
+            {isComplete ? (
+              <View style={styles.completeLabel}>
+                <Sparkles size={12} color={colors.success} strokeWidth={2} />
+                <Text style={styles.completeLabelText}>Goal Reached!</Text>
+              </View>
+            ) : (
+              <Text style={styles.remainingLabel}>
+                {formatCurrency(remaining)} to go
+              </Text>
+            )}
           </View>
-          <ChevronRight size={20} color={colors.textTertiary} />
+          <ChevronRight size={18} color={colors.textTertiary} strokeWidth={2} />
         </View>
 
         <View style={styles.progressSection}>
           <View style={styles.progressBar}>
-            <View
+            <Animated.View
               style={[
                 styles.progressFill,
                 {
@@ -104,20 +116,14 @@ export default function SavingsCard({ goal, onPress }: SavingsCardProps) {
           </View>
           
           <View style={styles.amountRow}>
-            <Text style={[styles.currentAmount, { color: goalColor }]}>
+            <Text style={[styles.currentAmount, { color: isComplete ? colors.success : goalColor }]}>
               {formatCurrency(goal.currentAmount)}
             </Text>
-            <Text style={styles.progressText}>
-              {progress.toFixed(0)}%
+            <Text style={styles.targetAmount}>
+              of {formatCurrency(goal.targetAmount)}
             </Text>
           </View>
         </View>
-
-        {isComplete && (
-          <View style={styles.completeBadge}>
-            <Text style={styles.completeText}>Goal Reached!</Text>
-          </View>
-        )}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -130,13 +136,13 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.medium,
+  },
+  cardComplete: {
+    borderWidth: 1,
+    borderColor: colors.successMuted,
   },
   header: {
     flexDirection: 'row',
@@ -144,12 +150,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.sm,
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    marginRight: spacing.md,
   },
   headerText: {
     flex: 1,
@@ -157,14 +163,23 @@ const styles = StyleSheet.create({
   name: {
     ...typography.headline,
     color: colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: spacing.xxs,
   },
-  targetLabel: {
+  remainingLabel: {
     ...typography.footnote,
     color: colors.textSecondary,
   },
-  progressSection: {
+  completeLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
+  },
+  completeLabelText: {
+    ...typography.footnoteMedium,
+    color: colors.success,
+  },
+  progressSection: {
+    gap: spacing.sm,
   },
   progressBar: {
     height: 8,
@@ -183,22 +198,10 @@ const styles = StyleSheet.create({
   },
   currentAmount: {
     ...typography.headline,
+    fontVariant: ['tabular-nums'],
   },
-  progressText: {
+  targetAmount: {
     ...typography.footnote,
-    color: colors.textSecondary,
-  },
-  completeBadge: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.successLight,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.sm,
-    alignSelf: 'flex-start',
-  },
-  completeText: {
-    ...typography.caption1,
-    color: colors.success,
-    fontWeight: '600' as const,
+    color: colors.textTertiary,
   },
 });

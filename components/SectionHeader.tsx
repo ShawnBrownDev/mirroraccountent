@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { borderRadius, colors, spacing, typography } from '@/constants/theme';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
-import { colors, spacing, typography } from '@/constants/theme';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface SectionHeaderProps {
   title: string;
@@ -29,11 +29,11 @@ export default function SectionHeader({
         )}
       </View>
       {isCollapsible && (
-        <View style={styles.chevron}>
+        <View style={styles.chevronContainer}>
           {isCollapsed ? (
-            <ChevronDown size={20} color={colors.textTertiary} />
+            <ChevronDown size={18} color={colors.textTertiary} strokeWidth={2} />
           ) : (
-            <ChevronUp size={20} color={colors.textTertiary} />
+            <ChevronUp size={18} color={colors.textTertiary} strokeWidth={2} />
           )}
         </View>
       )}
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   titleContainer: {
     flexDirection: 'row',
@@ -66,24 +66,29 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   title: {
-    ...typography.headline,
+    ...typography.footnoteMedium,
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    fontSize: 13,
   },
   countBadge: {
-    backgroundColor: colors.borderLight,
+    backgroundColor: colors.accentMuted,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.full,
+    minWidth: 24,
+    alignItems: 'center',
   },
   countText: {
-    ...typography.caption1,
-    color: colors.textSecondary,
-    fontWeight: '600' as const,
+    ...typography.caption1Medium,
+    color: colors.accent,
   },
-  chevron: {
-    padding: spacing.xs,
+  chevronContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

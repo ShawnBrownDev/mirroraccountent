@@ -1,7 +1,7 @@
 import { Bill, BillPayment, MonthlyBillView } from '@/types/bill';
+import { FREQUENCY_MULTIPLIERS, IncomeProfile } from '@/types/income';
 import { MonthlySummary } from '@/types/user';
-import { IncomeProfile, FREQUENCY_MULTIPLIERS } from '@/types/income';
-import { getDueDateForMonth, getDaysUntilDue, isOverdue } from './date';
+import { getDaysUntilDue, getDueDateForMonth, getNextDueDate } from './date';
 
 export function getBillsForMonth(
   bills: Bill[],
@@ -14,9 +14,12 @@ export function getBillsForMonth(
       (p) => p.billId === bill.id && p.month === month && p.year === year
     );
     
-    const dueDate = getDueDateForMonth(bill.dueDay, month, year);
     const isPaidThisMonth = payment?.isPaid ?? false;
     const amountDue = payment?.actualAmount ?? bill.expectedAmount;
+    
+    const dueDate = isPaidThisMonth 
+      ? getDueDateForMonth(bill.dueDay, month, year)
+      : getNextDueDate(bill.dueDay);
     
     return {
       ...bill,
@@ -24,7 +27,7 @@ export function getBillsForMonth(
       isPaidThisMonth,
       amountDue,
       dueDate,
-      isOverdue: !isPaidThisMonth && isOverdue(dueDate),
+      isOverdue: false,
       daysUntilDue: getDaysUntilDue(dueDate),
     };
   });
