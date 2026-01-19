@@ -1,29 +1,31 @@
-import React, { useCallback } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Text,
-  Switch,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import IncomeProfile from '@/components/IncomeProfile';
+import SavingsCard from '@/components/SavingsCard';
+import { borderRadius, colors, shadows, spacing, typography } from '@/constants/theme';
+import { useMirror } from '@/providers/MirrorProvider';
+import { calculateAverageMonthlyBills } from '@/utils/calculations';
+import { formatCurrency } from '@/utils/money';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
   Bell,
-  TrendingDown,
   Calculator,
-  Info,
-  Plus,
-  Target,
+  ChevronRight,
+  HelpCircle,
   PiggyBank,
-} from 'lucide-react-native'; 
-import { useMirror } from '@/providers/MirrorProvider';
-import IncomeProfile from '@/components/IncomeProfile';
-import SavingsCard from '@/components/SavingsCard';
-import { formatCurrency } from '@/utils/money';
-import { calculateAverageMonthlyBills } from '@/utils/calculations';
-import { colors, spacing, borderRadius, typography } from '@/constants/theme';
+  Plus,
+  Shield,
+  TrendingDown,
+} from 'lucide-react-native';
+import React, { useCallback } from 'react';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -73,7 +75,9 @@ export default function ProfileScreen() {
       testID="profile-scroll"
     >
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Income</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Income</Text>
+        </View>
         <IncomeProfile
           incomeProfile={profile.incomeProfile}
           estimatedMonthlyIncome={estimatedMonthlyIncome}
@@ -82,13 +86,15 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Monthly Summary</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Monthly Summary</Text>
+        </View>
         
-        <View style={styles.card}>
+        <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <View style={[styles.iconBox, { backgroundColor: colors.dangerLight }]}>
-                <TrendingDown size={18} color={colors.danger} />
+              <View style={[styles.iconBox, { backgroundColor: colors.dangerMuted }]}>
+                <TrendingDown size={18} color={colors.danger} strokeWidth={2} />
               </View>
               <Text style={styles.summaryLabel}>Total Bills</Text>
               <Text style={styles.summaryValue}>
@@ -99,8 +105,8 @@ export default function ProfileScreen() {
             <View style={styles.divider} />
 
             <View style={styles.summaryItem}>
-              <View style={[styles.iconBox, { backgroundColor: colors.successLight }]}>
-                <Calculator size={18} color={colors.success} />
+              <View style={[styles.iconBox, { backgroundColor: colors.accentMuted }]}>
+                <Calculator size={18} color={colors.accent} strokeWidth={2} />
               </View>
               <Text style={styles.summaryLabel}>Average Bills</Text>
               <Text style={styles.summaryValue}>
@@ -115,23 +121,104 @@ export default function ProfileScreen() {
           onPress={showBalanceInfo}
           activeOpacity={0.7}
         >
-          <View style={styles.infoContent}>
-            <Info size={18} color={colors.accent} />
-            <Text style={styles.infoText}>
-              How is my remaining balance calculated?
-            </Text>
+          <View style={styles.infoIconContainer}>
+            <HelpCircle size={18} color={colors.accent} strokeWidth={2} />
           </View>
+          <Text style={styles.infoText}>
+            How is my remaining balance calculated?
+          </Text>
+          <ChevronRight size={18} color={colors.textTertiary} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Savings Goals</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleCreateSavings}
+            activeOpacity={0.7}
+            testID="add-savings-button"
+          >
+            <Plus size={18} color={colors.accent} strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
+
+        {savings.length > 0 ? (
+          <>
+            <LinearGradient
+              colors={[colors.success, '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.savingsSummaryCard}
+            >
+              <View style={styles.savingsSummaryContent}>
+                <View style={styles.savingsSummaryLeft}>
+                  <View style={styles.savingsIconContainer}>
+                    <PiggyBank size={24} color={colors.textInverse} strokeWidth={1.5} />
+                  </View>
+                  <View>
+                    <Text style={styles.savingsTotalLabel}>Total Saved</Text>
+                    <Text style={styles.savingsTotalValue}>
+                      {formatCurrency(totalSavings)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.savingsSummaryRight}>
+                  <Text style={styles.savingsGoalLabel}>of {formatCurrency(totalSavingsTarget)}</Text>
+                  <View style={styles.savingsProgressBar}>
+                    <View
+                      style={[
+                        styles.savingsProgressFill,
+                        { width: `${savingsProgress}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.savingsProgressText}>
+                    {savingsProgress.toFixed(0)}% complete
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
+            {savings.map((goal) => (
+              <SavingsCard
+                key={goal.id}
+                goal={goal}
+                onPress={() => handleSavingsPress(goal.id)}
+              />
+            ))}
+          </>
+        ) : (
+          <TouchableOpacity
+            style={styles.emptyState}
+            onPress={handleCreateSavings}
+            activeOpacity={0.7}
+          >
+            <View style={styles.emptyIconContainer}>
+              <PiggyBank size={28} color={colors.success} strokeWidth={1.5} />
+            </View>
+            <Text style={styles.emptyTitle}>Start Saving</Text>
+            <Text style={styles.emptyDescription}>
+              Create your first savings goal to track your progress toward financial milestones
+            </Text>
+            <View style={styles.emptyButton}>
+              <Plus size={16} color={colors.textInverse} strokeWidth={2.5} />
+              <Text style={styles.emptyButtonText}>Add Goal</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+        </View>
         
-        <View style={styles.card}>
+        <View style={styles.settingsCard}>
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <View style={[styles.iconBox, { backgroundColor: colors.warningLight }]}>
-                <Bell size={18} color={colors.warning} />
+              <View style={[styles.iconBox, { backgroundColor: colors.warningMuted }]}>
+                <Bell size={18} color={colors.warning} strokeWidth={2} />
               </View>
               <View style={styles.settingText}>
                 <Text style={styles.settingTitle}>Bill Reminders</Text>
@@ -154,88 +241,22 @@ export default function ProfileScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Savings Goals</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleCreateSavings}
-            testID="add-savings-button"
-          >
-            <Plus size={18} color={colors.accent} />
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>About Mirror</Text>
         </View>
-
-        {savings.length > 0 ? (
-          <>
-            <View style={styles.savingsSummaryCard}>
-              <View style={styles.savingsSummaryRow}>
-                <View style={styles.savingsSummaryItem}>
-                  <View style={[styles.iconBox, { backgroundColor: colors.successLight }]}>
-                    <PiggyBank size={18} color={colors.success} />
-                  </View>
-                  <Text style={styles.summaryLabel}>Total Saved</Text>
-                  <Text style={[styles.summaryValue, { color: colors.success }]}>
-                    {formatCurrency(totalSavings)}
-                  </Text>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.savingsSummaryItem}>
-                  <View style={[styles.iconBox, { backgroundColor: colors.accentLight + '30' }]}>
-                    <Target size={18} color={colors.accent} />
-                  </View>
-                  <Text style={styles.summaryLabel}>Total Goals</Text>
-                  <Text style={styles.summaryValue}>
-                    {formatCurrency(totalSavingsTarget)}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.savingsProgressContainer}>
-                <View style={styles.savingsProgressBar}>
-                  <View
-                    style={[
-                      styles.savingsProgressFill,
-                      { width: `${savingsProgress}%` },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.savingsProgressText}>
-                  {savingsProgress.toFixed(0)}% of goals reached
-                </Text>
-              </View>
-            </View>
-            {savings.map((goal) => (
-              <SavingsCard
-                key={goal.id}
-                goal={goal}
-                onPress={() => handleSavingsPress(goal.id)}
-              />
-            ))}
-          </>
-        ) : (
-          <TouchableOpacity
-            style={styles.emptyState}
-            onPress={handleCreateSavings}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconBox, { backgroundColor: colors.successLight }]}>
-              <PiggyBank size={24} color={colors.success} />
-            </View>
-            <Text style={styles.emptyTitle}>Start Saving</Text>
-            <Text style={styles.emptyDescription}>
-              Create your first savings goal to track your progress
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
         
-        <View style={styles.card}>
+        <View style={styles.aboutCard}>
+          <View style={styles.aboutHeader}>
+            <View style={styles.aboutIconContainer}>
+              <Shield size={20} color={colors.accent} strokeWidth={2} />
+            </View>
+            <Text style={styles.aboutHeaderText}>Privacy First</Text>
+          </View>
           <Text style={styles.aboutText}>
             Mirror helps you see what needs to be paid this month and what remains after your bills are covered.
           </Text>
+          <View style={styles.aboutDivider} />
           <Text style={styles.disclaimer}>
-            Mirror is not a bank, financial advisor, or budgeting tool. It does not move money or access your accounts.
+            Mirror is not a bank, financial advisor, or budgeting tool. It does not move money or access your accounts. Your data stays on your device.
           </Text>
         </View>
       </View>
@@ -256,25 +277,25 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
   },
-  sectionTitle: {
-    ...typography.headline,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontSize: 13,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
   },
-  card: {
+  sectionTitle: {
+    ...typography.footnoteMedium,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  summaryCard: {
     backgroundColor: colors.surface,
     marginHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.medium,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -287,13 +308,13 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: 1,
-    height: 60,
+    height: 64,
     backgroundColor: colors.border,
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.sm,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -301,28 +322,109 @@ const styles = StyleSheet.create({
   summaryLabel: {
     ...typography.footnote,
     color: colors.textSecondary,
-    marginBottom: 2,
+    marginBottom: spacing.xxs,
   },
   summaryValue: {
     ...typography.headline,
     color: colors.textPrimary,
   },
   infoCard: {
-    backgroundColor: colors.borderLight,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
-  infoContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadows.small,
+  },
+  infoIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
   },
   infoText: {
     ...typography.subhead,
-    color: colors.accent,
+    color: colors.textPrimary,
     flex: 1,
+  },
+  addButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savingsSummaryCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    ...shadows.large,
+  },
+  savingsSummaryContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  savingsSummaryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  savingsIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savingsTotalLabel: {
+    ...typography.footnote,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: spacing.xxs,
+  },
+  savingsTotalValue: {
+    ...typography.title2,
+    color: colors.textInverse,
+  },
+  savingsSummaryRight: {
+    alignItems: 'flex-end',
+  },
+  savingsGoalLabel: {
+    ...typography.caption1,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: spacing.xs,
+  },
+  savingsProgressBar: {
+    width: 80,
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.xs,
+  },
+  savingsProgressFill: {
+    height: '100%',
+    backgroundColor: colors.textInverse,
+    borderRadius: borderRadius.full,
+  },
+  savingsProgressText: {
+    ...typography.caption2,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  settingsCard: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadows.medium,
   },
   settingRow: {
     flexDirection: 'row',
@@ -346,99 +448,92 @@ const styles = StyleSheet.create({
   settingDescription: {
     ...typography.footnote,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: spacing.xxs,
+  },
+  aboutCard: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    ...shadows.medium,
+  },
+  aboutHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  aboutIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  aboutHeaderText: {
+    ...typography.headline,
+    color: colors.textPrimary,
   },
   aboutText: {
     ...typography.body,
     color: colors.textPrimary,
     lineHeight: 24,
-    marginBottom: spacing.md,
+  },
+  aboutDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.md,
   },
   disclaimer: {
     ...typography.footnote,
     color: colors.textTertiary,
     lineHeight: 18,
   },
-  bottomSpacer: {
-    height: spacing.xxl,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.accentLight + '30',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  savingsSummaryCard: {
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.sm,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  savingsSummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  savingsSummaryItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  savingsProgressContainer: {
-    marginTop: spacing.md,
-    gap: spacing.xs,
-  },
-  savingsProgressBar: {
-    height: 6,
-    backgroundColor: colors.borderLight,
-    borderRadius: borderRadius.full,
-    overflow: 'hidden',
-  },
-  savingsProgressFill: {
-    height: '100%',
-    backgroundColor: colors.success,
-    borderRadius: borderRadius.full,
-  },
-  savingsProgressText: {
-    ...typography.caption1,
-    color: colors.textTertiary,
-    textAlign: 'center',
-  },
   emptyState: {
     backgroundColor: colors.surface,
     marginHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
     alignItems: 'center',
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.medium,
+  },
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.successMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
   emptyTitle: {
     ...typography.headline,
     color: colors.textPrimary,
-    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   emptyDescription: {
-    ...typography.footnote,
+    ...typography.subhead,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+    lineHeight: 22,
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.success,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.full,
+    gap: spacing.xs,
+    ...shadows.colored(colors.success),
+  },
+  emptyButtonText: {
+    ...typography.subheadMedium,
+    color: colors.textInverse,
+  },
+  bottomSpacer: {
+    height: spacing.xxxl,
   },
 });

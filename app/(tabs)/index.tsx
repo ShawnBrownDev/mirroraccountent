@@ -1,18 +1,21 @@
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useMirror } from '@/providers/MirrorProvider';
-import MonthlySummary from '@/components/MonthlySummary';
-import SectionHeader from '@/components/SectionHeader';
 import BillCard from '@/components/BillCard';
 import EmptyState from '@/components/EmptyState';
-import { colors, spacing } from '@/constants/theme';
+import MonthlySummary from '@/components/MonthlySummary';
+import SectionHeader from '@/components/SectionHeader';
+import { OverviewSkeleton } from '@/components/SkeletonLoader';
+import { borderRadius, colors, spacing, typography } from '@/constants/theme';
+import { useMirror } from '@/providers/MirrorProvider';
+import { useRouter } from 'expo-router';
+import { CheckCircle, Clock } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 export default function OverviewScreen() {
   const router = useRouter();
@@ -28,6 +31,20 @@ export default function OverviewScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [paidCollapsed, setPaidCollapsed] = useState(true);
+  const listAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isLoading) {
+      Animated.stagger(50, [
+        Animated.spring(listAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isLoading, listAnim]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -47,15 +64,12 @@ export default function OverviewScreen() {
   }, [markBillUnpaid]);
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
-    );
+    return <OverviewSkeleton />;
   }
 
   const hasNoBills = bills.length === 0;
   const hasNoUpcoming = upcomingBills.length === 0 && paidBills.length > 0;
+  
 
   return (
     <ScrollView
@@ -76,25 +90,74 @@ export default function OverviewScreen() {
       {hasNoBills ? (
         <EmptyState type="no-bills" />
       ) : (
-        <>
-          <SectionHeader title="Upcoming" count={upcomingBills.length} />
+        <Animated.View
+          style={{
+            opacity: listAnim,
+            transform: [{
+              translateY: listAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              }),
+            }],
+          }}
+        >
+          {upcomingBills.length > 0 && (
+            <View style={styles.quickInsight}>
+              <View style={styles.insightIcon}>
+                <Clock size={14} color={colors.warning} strokeWidth={2.5} />
+              </View>
+              <Text style={styles.insightText}>
+                <Text style={styles.insightHighlight}>{upcomingBills.length} bill{upcomingBills.length !== 1 ? 's' : ''}</Text>
+                {' '}remaining this month
+              </Text>
+            </View>
+          )}
+
+          <SectionHeader 
+            title="Upcoming" 
+            count={upcomingBills.length}
+          />
           
           {hasNoUpcoming ? (
             <EmptyState type="no-upcoming" />
           ) : (
-            upcomingBills.map((bill) => (
-              <BillCard
+            upcomingBills.map((bill, index) => (
+              <Animated.View
                 key={bill.id}
-                bill={bill}
-                onPress={() => handleBillPress(bill.id)}
-                onMarkPaid={() => handleMarkPaid(bill.id)}
-                onMarkUnpaid={() => handleMarkUnpaid(bill.id)}
-              />
+                style={{
+                  opacity: listAnim,
+                  transform: [{
+                    translateY: listAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20 + index * 10, 0],
+                    }),
+                  }],
+                }}
+              >
+                <BillCard
+                  bill={bill}
+                  onPress={() => handleBillPress(bill.id)}
+                  onMarkPaid={() => handleMarkPaid(bill.id)}
+                  onMarkUnpaid={() => handleMarkUnpaid(bill.id)}
+                />
+              </Animated.View>
             ))
           )}
 
           {paidBills.length > 0 && (
             <>
+              {paidCollapsed && (
+                <View style={styles.paidSummary}>
+                  <View style={styles.paidSummaryIcon}>
+                    <CheckCircle size={14} color={colors.success} strokeWidth={2.5} />
+                  </View>
+                  <Text style={styles.paidSummaryText}>
+                    <Text style={styles.paidSummaryHighlight}>{paidBills.length} bill{paidBills.length !== 1 ? 's' : ''}</Text>
+                    {' '}paid this month
+                  </Text>
+                </View>
+              )}
+              
               <SectionHeader
                 title="Paid This Month"
                 count={paidBills.length}
@@ -115,7 +178,7 @@ export default function OverviewScreen() {
                 ))}
             </>
           )}
-        </>
+        </Animated.View>
       )}
 
       <View style={styles.bottomSpacer} />
@@ -131,13 +194,64 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.xl,
   },
-  loadingContainer: {
-    flex: 1,
+  quickInsight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.warningMuted,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  insightIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.warningLight,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
+  },
+  insightText: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  insightHighlight: {
+    ...typography.subheadMedium,
+    color: colors.textPrimary,
+  },
+  paidSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.successMuted,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  paidSummaryIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.successLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paidSummaryText: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  paidSummaryHighlight: {
+    ...typography.subheadMedium,
+    color: colors.success,
   },
   bottomSpacer: {
-    height: spacing.xl,
+    height: spacing.xxxl,
   },
 });
